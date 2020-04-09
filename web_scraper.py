@@ -8,7 +8,8 @@ Based on the json files, this program extracts the following features from each 
 4. Rating
 5. Date
 6. Review
-7. Link
+7. Sentiment (Calculated based on reviews, -1<x<1)
+8. Link
 
 These data are then transferred to a csv file, reviews.csv.
 
@@ -24,8 +25,12 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+
 f = open("reviews.csv", 'w+')
 def scrape(year, month):#scrape for each year and month
+    analyzer = SentimentIntensityAnalyzer()
+    
     tmpstr = str(month)
     if len(tmpstr) == 1:
         tmpstr = '0' + tmpstr
@@ -77,28 +82,32 @@ def scrape(year, month):#scrape for each year and month
             #print(word)
 
 
-    print(len(rating),len(link),len(review),len(date))
-    #print(date[37])
+    #print(len(rating),len(link),len(review),len(date))
     if len(review) != len(link) or len(review) != len(rating) or len(date) != len(review):
         print("ERROR year =",year,"month =",month)#check if no error, all should be equal due to constant no. of entries per page
         return -1
     for i in range(0,len(rating)):
         s = link[i]
         tmp = s.split('/')
-        data = (tmp[4],tmp[5],tmp[7],rating[i],date[i]+' '+str(year),review[i],link[i])#band, album, author of review, rating, date, review, link
+        sentiment = analyzer.polarity_scores(review[i])['compound']
+        data = (tmp[4],tmp[5],tmp[7],rating[i],date[i]+' '+str(year),review[i],sentiment,link[i])#band, album, author of review, rating, date, review,sentiment link
+        
         for item in data:
             #print(item)
-            try:
-                item.encode('ascii')
-            except UnicodeEncodeError:
-                item = "Unknown" #username not in ascii
-            f.write(item+',')
+            if isinstance(item,float):
+                item = str(item)
+            else:
+                try:
+                    item.encode('ascii')
+                except UnicodeEncodeError:
+                    item = "Unknown" #username not in ascii
+            f.write('"'+item+'"'+',')
         #print(data)
         f.write('\n')#new entry
     return len(rating) # no error, return number of entries
 
 def main():
-    f.write('Band,Album,Author,Rating,Date,Review,Link\n')#headers
+    f.write('Band,Album,Author,Rating,Date,Review,Sentiment,Link\n')#headers
     total_entries = 0
     for year in range (2002,2020):
         print(year)#progress tracker
