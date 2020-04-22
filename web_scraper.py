@@ -26,8 +26,7 @@ from bs4 import BeautifulSoup
 import re
 import json
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-
-f = open("reviews.csv", 'w+')
+f = open("reviewsv5.csv", 'w+')
 def scrape(year, month):#scrape for each year and month
     analyzer = SentimentIntensityAnalyzer()
     
@@ -78,7 +77,7 @@ def scrape(year, month):#scrape for each year and month
             
         elif len(word) > 0 and word[-1] == '%' and word[0].isalpha() == False:
             #find the rating
-            rating.append(word)
+            rating.append(word[:-1])#without %
             #print(word)
 
 
@@ -90,7 +89,8 @@ def scrape(year, month):#scrape for each year and month
         s = link[i]
         tmp = s.split('/')
         sentiment = analyzer.polarity_scores(review[i])['compound']
-        data = (tmp[4],tmp[5],tmp[7],rating[i],date[i]+' '+str(year),review[i],sentiment,link[i])#band, album, author of review, rating, date, review,sentiment link
+        data = (tmp[4],tmp[5],tmp[7],rating[i],date[i]+' '+str(year),str(year),review[i],sentiment,str(len(review[i])),link[i])#band, album, author of review, rating, date, review,sentiment link
+        #data = (tmp[4],tmp[5],tmp[7],rating[i],date[i]+' '+str(year),sentiment,link[i])#band, album, author of review, rating, date, review,sentiment link
         
         for item in data:
             #print(item)
@@ -101,13 +101,17 @@ def scrape(year, month):#scrape for each year and month
                     item.encode('ascii')
                 except UnicodeEncodeError:
                     item = "Unknown" #username not in ascii
-            f.write('"'+item+'"'+',')
+            f.write('"'+item+'"')#quotes because of presence of commas
+            #f.write(item)
+            if item[:5] != "https":
+                f.write(',')
         #print(data)
         f.write('\n')#new entry
     return len(rating) # no error, return number of entries
 
 def main():
-    f.write('Band,Album,Author,Rating,Date,Review,Sentiment,Link\n')#headers
+    f.write('Band,Album,Author,Rating,Date,Year,Review,Sentiment,Length of Review,Link\n')#headers
+    #f.write('Band,Album,Author,Rating,Date,Sentiment,Link\n')#headers
     total_entries = 0
     for year in range (2002,2020):
         print(year)#progress tracker
